@@ -1,0 +1,254 @@
+import { useState } from 'react'
+import { Button } from "/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "/components/ui/card"
+import { Input } from "/components/ui/input"
+import { Label } from "/components/ui/label"
+import { Textarea } from "/components/ui/textarea"
+import { Trash, Edit, Plus, Check, X } from "lucide-react"
+
+interface Task {
+  id: number
+  title: string
+  description: string
+  dueDate: string
+  status: 'pending' | 'completed'
+}
+
+const generateAISuggestions = (tasks: Task[]): Task[] => {
+  const suggestions: Task[] = []
+  if (tasks.length === 0) {
+    suggestions.push({
+      id: Date.now(),
+      title: "Complete your first task",
+      description: "Start by adding a task to your list",
+      dueDate: new Date().toISOString().split('T')[0],
+      status: 'pending',
+    })
+  } else {
+    suggestions.push({
+      id: Date.now(),
+      title: `Follow up on ${tasks[0].title}`,
+      description: `Check the progress of your first task`,
+      dueDate: new Date().toISOString().split('T')[0],
+      status: 'pending',
+    })
+  }
+  return suggestions
+}
+
+export default function TaskManagement() {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [suggestions, setSuggestions] = useState<Task[]>(generateAISuggestions(tasks))
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
+  const [newTask, setNewTask] = useState({ title: '', description: '', dueDate: '' })
+  const [editingTask, setEditingTask] = useState({ title: '', description: '', dueDate: '' })
+
+  const addTask = () => {
+    if (newTask.title.trim() && newTask.description.trim() && newTask.dueDate) {
+      const task: Task = {
+        id: Date.now(),
+        title: newTask.title,
+        description: newTask.description,
+        dueDate: newTask.dueDate,
+        status: 'pending',
+      }
+      setTasks([...tasks, task])
+      setNewTask({ title: '', description: '', dueDate: '' })
+      setSuggestions(generateAISuggestions([...tasks, task]))
+    }
+  }
+
+  const editTask = (id: number) => {
+    const task = tasks.find((t) => t.id === id)
+    if (task) {
+      setEditingTaskId(id)
+      setEditingTask({ title: task.title, description: task.description, dueDate: task.dueDate })
+    }
+  }
+
+  const updateTask = () => {
+    if (editingTaskId !== null) {
+      const updatedTasks = tasks.map((task) =>
+        task.id === editingTaskId
+          ? { ...task, title: editingTask.title, description: editingTask.description, dueDate: editingTask.dueDate }
+          : task
+      )
+      setTasks(updatedTasks)
+      setEditingTaskId(null)
+      setEditingTask({ title: '', description: '', dueDate: '' })
+      setSuggestions(generateAISuggestions(updatedTasks))
+    }
+  }
+
+  const deleteTask = (id: number) => {
+    const updatedTasks = tasks.filter((task) => task.id !== id)
+    setTasks(updatedTasks)
+    setSuggestions(generateAISuggestions(updatedTasks))
+  }
+
+  const toggleTaskStatus = (id: number) => {
+    const updatedTasks = tasks.map((task) =>
+      task.id === id ? { ...task, status: task.status === 'pending' ? 'completed' : 'pending' } : task
+    )
+    setTasks(updatedTasks)
+    setSuggestions(generateAISuggestions(updatedTasks))
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col p-4">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold">AI-Powered Task Management</h1>
+      </header>
+
+      <main className="flex-grow">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Tasks</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tasks.map((task) => (
+              <Card key={task.id} className="relative">
+                <CardHeader>
+                  <CardTitle>{task.title}</CardTitle>
+                  <CardDescription>{task.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Due: {task.dueDate}</p>
+                </CardContent>
+                <CardFooter className="flex justify-between items-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleTaskStatus(task.id)}
+                  >
+                    {task.status === 'pending' ? 'Mark as Completed' : 'Mark as Pending'}
+                  </Button>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="icon" onClick={() => editTask(task.id)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="destructive" size="icon" onClick={() => deleteTask(task.id)}>
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Create New Task</h2>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={newTask.title}
+                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={newTask.description}
+                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="dueDate">Due Date</Label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={newTask.dueDate}
+                onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                className="mt-2"
+              />
+            </div>
+            <Button onClick={addTask} className="mt-4">
+              <Plus className="mr-2 h-4 w-4" /> Add Task
+            </Button>
+          </div>
+        </div>
+
+        {editingTaskId !== null && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">Edit Task</h2>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="editTitle">Title</Label>
+                <Input
+                  id="editTitle"
+                  value={editingTask.title}
+                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editDescription">Description</Label>
+                <Textarea
+                  id="editDescription"
+                  value={editingTask.description}
+                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editDueDate">Due Date</Label>
+                <Input
+                  id="editDueDate"
+                  type="date"
+                  value={editingTask.dueDate}
+                  onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
+                  className="mt-2"
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button onClick={updateTask}>
+                  <Check className="mr-2 h-4 w-4" /> Save
+                </Button>
+                <Button variant="destructive" onClick={() => setEditingTaskId(null)}>
+                  <X className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">AI Suggestions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {suggestions.map((suggestion) => (
+              <Card key={suggestion.id} className="relative">
+                <CardHeader>
+                  <CardTitle>{suggestion.title}</CardTitle>
+                  <CardDescription>{suggestion.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">Due: {suggestion.dueDate}</p>
+                </CardContent>
+                <CardFooter className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addTask()}
+                  >
+                    Add to Tasks
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
